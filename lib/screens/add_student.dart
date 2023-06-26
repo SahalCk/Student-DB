@@ -1,20 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:student_db/db/function/db_functions.dart';
+import 'package:provider/provider.dart';
 import 'package:student_db/db/model/student_model.dart';
+import 'package:student_db/db/providers/student_provider.dart';
+import 'package:student_db/db/providers/temp_image_provider.dart';
 
-File? _image;
-
-class AddStudentScreen extends StatefulWidget {
+class AddStudentScreen extends StatelessWidget {
   AddStudentScreen({super.key});
 
-  @override
-  State<AddStudentScreen> createState() => _AddStudentScreenState();
-}
-
-class _AddStudentScreenState extends State<AddStudentScreen> {
   final _namecontroller = TextEditingController();
 
   final _agecontroller = TextEditingController();
@@ -29,7 +23,7 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Add New Student"),
+        title: const Text("Add New Student"),
       ),
       body: SafeArea(
         child: Padding(
@@ -42,37 +36,43 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Align(
-                        alignment: Alignment.topCenter,
-                        child: _image?.path == null
-                            ? const CircleAvatar(
-                                backgroundImage:
-                                    AssetImage('assets/images/gallery.png'),
-                                radius: 65,
-                              )
-                            : CircleAvatar(
-                                radius: 65,
-                                backgroundImage: FileImage(
-                                  File(_image!.path),
-                                ),
-                              )),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    ElevatedButton.icon(
-                        onPressed: () {
-                          getImage();
-                        },
-                        icon: Icon(Icons.photo),
-                        label: Text("Add Photo")),
-                    SizedBox(
-                      height: 30,
+                    Consumer<TempImageProvider>(
+                      builder: (context, value, child) => Column(
+                        children: [
+                          Align(
+                              alignment: Alignment.topCenter,
+                              child: value.tempImagePath == null
+                                  ? const CircleAvatar(
+                                      backgroundImage: AssetImage(
+                                          'assets/images/gallery.png'),
+                                      radius: 65,
+                                    )
+                                  : CircleAvatar(
+                                      radius: 65,
+                                      backgroundImage: FileImage(
+                                        File(value.tempImagePath!),
+                                      ),
+                                    )),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          ElevatedButton.icon(
+                              onPressed: () {
+                                getImage(value);
+                              },
+                              icon: const Icon(Icons.photo),
+                              label: const Text("Add Photo")),
+                          const SizedBox(
+                            height: 30,
+                          ),
+                        ],
+                      ),
                     ),
                     TextFormField(
                       controller: _namecontroller,
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                           label: Text("Student's Name"),
                           border: OutlineInputBorder(
                               borderRadius:
@@ -82,9 +82,10 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
                         if (_namecontroller.text.isEmpty) {
                           return 'Name Field is Empty';
                         }
+                        return null;
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 30,
                     ),
                     TextFormField(
@@ -102,9 +103,10 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
                         if (_agecontroller.text.isEmpty) {
                           return 'Age Field is Empty';
                         }
+                        return null;
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 30,
                     ),
                     TextFormField(
@@ -125,9 +127,10 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
                         } else if (_phonecontroller.text.length < 10) {
                           return 'Enter a valid Phone number';
                         }
+                        return null;
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 30,
                     ),
                     TextFormField(
@@ -146,9 +149,10 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
                         } else if (int.parse(_markcontroller.text) > 100) {
                           return 'Enter a valid Mark';
                         }
+                        return null;
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 40,
                     ),
                     Row(
@@ -156,32 +160,39 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
                       children: [
                         ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                                fixedSize: Size(130, 50),
+                                fixedSize: const Size(130, 50),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(30)),
                                 backgroundColor: Colors.red),
                             onPressed: () {
                               Navigator.of(context).pop();
                             },
-                            icon: Icon(Icons.cancel),
-                            label: Text("Cancel")),
-                        ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                                fixedSize: Size(130, 50),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30)),
-                                backgroundColor: Colors.green[600]),
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                if (_image?.path == null) {
-                                  addingFailed();
-                                } else {
-                                  addingSuccess();
-                                }
-                              }
-                            },
-                            icon: Icon(Icons.send),
-                            label: Text("Submit")),
+                            icon: const Icon(Icons.cancel),
+                            label: const Text("Cancel")),
+                        Consumer<TempImageProvider>(
+                          builder: (context, value, child) =>
+                              Consumer<StudentProvider>(
+                            builder: (context, value2, child) =>
+                                ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                        fixedSize: const Size(130, 50),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(30)),
+                                        backgroundColor: Colors.green[600]),
+                                    onPressed: () {
+                                      if (_formKey.currentState!.validate()) {
+                                        if (value.tempImagePath == null) {
+                                          addingFailed(context);
+                                        } else {
+                                          addingSuccess(value2, context, value);
+                                        }
+                                      }
+                                    },
+                                    icon: const Icon(Icons.send),
+                                    label: const Text("Submit")),
+                          ),
+                        ),
                       ],
                     )
                   ],
@@ -194,20 +205,7 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
     );
   }
 
-  Future<void> getImage() async {
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (image == null) {
-      return;
-    }
-
-    final imageTemporary = File(image.path);
-
-    setState(() {
-      _image = imageTemporary;
-    });
-  }
-
-  void addingFailed() {
+  void addingFailed(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
       content: Text("Please add the pofile picture!"),
       backgroundColor: Colors.red,
@@ -219,25 +217,31 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
     ));
   }
 
-  void addingSuccess() {
+  void addingSuccess(
+      StudentProvider value, BuildContext context, TempImageProvider value2) {
     Student st = Student(
         name: _namecontroller.text.trim(),
         age: _agecontroller.text.trim(),
         number: _phonecontroller.text.trim(),
         mark: _markcontroller.text.trim(),
-        profpic: _image!.path);
-    addStudent(st);
+        profpic: value2.tempImagePath!);
+    value.addStudent(st);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content:
           Text('${_namecontroller.text} is added to database successfully!'),
       backgroundColor: Colors.green,
-      margin: EdgeInsets.all(10),
+      margin: const EdgeInsets.all(10),
       behavior: SnackBarBehavior.floating,
       showCloseIcon: true,
       closeIconColor: Colors.white,
-      duration: Duration(seconds: 2),
+      duration: const Duration(seconds: 2),
     ));
-    _image = null;
+    value2.tempImagePath = null;
+    value2.notify();
     Navigator.of(context).pop();
+  }
+
+  void getImage(TempImageProvider value) async {
+    await value.getImage();
   }
 }

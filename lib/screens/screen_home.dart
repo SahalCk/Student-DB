@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:student_db/db/function/db_functions.dart';
+import 'package:provider/provider.dart';
+import 'package:student_db/db/providers/student_provider.dart';
+
 import 'package:student_db/screens/add_student.dart';
 import 'package:student_db/screens/edit_student.dart';
 import 'package:student_db/screens/screen_profile.dart';
@@ -12,18 +14,19 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    getAllStudents();
+    final studentProvider = Provider.of<StudentProvider>(context);
+    studentProvider.getAllStudents();
     return Scaffold(
         appBar: AppBar(
-          leading: IconButton(onPressed: () {}, icon: Icon(Icons.home)),
-          title: Text("Student List"),
+          leading: IconButton(onPressed: () {}, icon: const Icon(Icons.home)),
+          title: const Text("Student List"),
           centerTitle: true,
           actions: [
             IconButton(
                 onPressed: () {
                   showSearch(context: context, delegate: Search());
                 },
-                icon: Icon(Icons.search))
+                icon: const Icon(Icons.search))
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
@@ -32,11 +35,11 @@ class HomeScreen extends StatelessWidget {
               return AddStudentScreen();
             }));
           },
-          label: Text(
+          label: const Text(
             "Add Student",
             style: TextStyle(fontSize: 20),
           ),
-          icon: Icon(
+          icon: const Icon(
             Icons.add,
             size: 30,
           ),
@@ -45,69 +48,68 @@ class HomeScreen extends StatelessWidget {
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.only(top: 10),
-            child: ValueListenableBuilder(
-              valueListenable: students,
-              builder: (context, studentlist, child) {
-                return ListView.separated(
-                    itemBuilder: (context, index) {
-                      return Expanded(
-                        child: ListTile(
-                          onTap: () {
-                            Navigator.of(context)
-                                .push(MaterialPageRoute(builder: (ctx) {
-                              return ProfileScreen(
-                                index: index,
-                              );
-                            }));
-                          },
-                          leading: CircleAvatar(
-                              radius: 40,
-                              backgroundImage:
-                                  FileImage(File(studentlist[index].profpic))),
-                          title: Text(studentlist[index].name,
-                              style: TextStyle(fontSize: 20)),
-                          trailing: FittedBox(
-                            child: Row(
-                              children: [
-                                IconButton(
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                        MaterialPageRoute(builder: (context) {
-                                      return EditStudent(index: index);
-                                    }));
-                                  },
-                                  icon: Icon(Icons.edit),
-                                  color: Colors.grey,
+            child: Consumer<StudentProvider>(
+                builder: (context, value, child) => value.students.isNotEmpty
+                    ? ListView.separated(
+                        itemBuilder: (context, index) {
+                          return Flex(direction: Axis.vertical, children: [
+                            ListTile(
+                              onTap: () {
+                                Navigator.of(context)
+                                    .push(MaterialPageRoute(builder: (ctx) {
+                                  return ProfileScreen(
+                                    index: index,
+                                  );
+                                }));
+                              },
+                              leading: CircleAvatar(
+                                  radius: 40,
+                                  backgroundImage: FileImage(
+                                      File(value.students[index].profpic))),
+                              title: Text(value.students[index].name,
+                                  style: const TextStyle(fontSize: 20)),
+                              trailing: FittedBox(
+                                child: Row(
+                                  children: [
+                                    IconButton(
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                                builder: (context) {
+                                          return EditStudent(index: index);
+                                        }));
+                                      },
+                                      icon: const Icon(Icons.edit),
+                                      color: Colors.grey,
+                                    ),
+                                    IconButton(
+                                      onPressed: () {
+                                        showAlert(context, index, value);
+                                      },
+                                      icon: const Icon(Icons.delete),
+                                      color: Colors.red,
+                                    )
+                                  ],
                                 ),
-                                IconButton(
-                                  onPressed: () {
-                                    showAlert(context, index);
-                                  },
-                                  icon: Icon(Icons.delete),
-                                  color: Colors.red,
-                                )
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                    separatorBuilder: (context, index) {
-                      return const Divider();
-                    },
-                    itemCount: students.value.length);
-              },
-            ),
+                          ]);
+                        },
+                        separatorBuilder: (context, index) {
+                          return const Divider();
+                        },
+                        itemCount: value.students.length)
+                    : const Center(child: Text('No Items to Display'))),
           ),
         ));
   }
 
-  void showAlert(BuildContext context, int index) {
+  void showAlert(BuildContext context, int index, dynamic value) {
     showDialog(
         context: context,
         builder: (ctx) {
           return AlertDialog(
-            title: Text('Do you want to delete ${students.value[index].name}'),
+            title: Text('Do you want to delete ${value.students[index].name}'),
             content: const Text(
                 'All the related datas will be cleared from the database'),
             actions: [
@@ -115,13 +117,13 @@ class HomeScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(ctx).pop();
                   },
-                  child: Text("No")),
+                  child: const Text("No")),
               TextButton(
                   onPressed: () {
-                    deleteStudent(index);
+                    value.deleteStudent(index);
                     Navigator.of(ctx).pop();
                   },
-                  child: Text("Yes"))
+                  child: const Text("Yes"))
             ],
           );
         });

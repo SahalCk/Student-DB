@@ -1,13 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:student_db/db/function/db_functions.dart';
+import 'package:provider/provider.dart';
+import 'package:student_db/db/providers/student_provider.dart';
+import 'package:student_db/db/providers/temp_image_provider.dart';
 
 import '../db/model/student_model.dart';
 
-File? _image;
-
+// ignore: must_be_immutable
 class EditStudent extends StatefulWidget {
   int index;
   EditStudent({super.key, required this.index});
@@ -29,16 +29,21 @@ class _EditStudentState extends State<EditStudent> {
 
   @override
   void initState() {
-    String name = students.value[widget.index].name;
+    final studentProvider =
+        Provider.of<StudentProvider>(context, listen: false);
+
+    String name = studentProvider.students[widget.index].name;
     _namecontroller = TextEditingController(text: name);
-    String age = students.value[widget.index].age;
+    String age = studentProvider.students[widget.index].age;
     _agecontroller = TextEditingController(text: age);
-    String phone = students.value[widget.index].number;
+    String phone = studentProvider.students[widget.index].number;
     _phonecontroller = TextEditingController(text: phone);
-    String mark = students.value[widget.index].mark;
+    String mark = studentProvider.students[widget.index].mark;
     _markcontroller = TextEditingController(text: mark);
-    String profile = students.value[widget.index].profpic;
-    _image = File(profile);
+    String profile = studentProvider.students[widget.index].profpic;
+    final tempImageProvider =
+        Provider.of<TempImageProvider>(context, listen: false);
+    tempImageProvider.tempImagePath = profile;
     super.initState();
   }
 
@@ -46,7 +51,7 @@ class _EditStudentState extends State<EditStudent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Edit ${students.value[widget.index].name}"),
+        title: Text(_namecontroller.text),
       ),
       body: SafeArea(
         child: Padding(
@@ -59,37 +64,44 @@ class _EditStudentState extends State<EditStudent> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Align(
-                        alignment: Alignment.topCenter,
-                        child: _image?.path == null
-                            ? const CircleAvatar(
-                                backgroundImage:
-                                    AssetImage('assets/images/gallery.png'),
-                                radius: 65,
-                              )
-                            : CircleAvatar(
-                                radius: 65,
-                                backgroundImage: FileImage(
-                                  File(_image!.path),
-                                ),
-                              )),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    ElevatedButton.icon(
-                        onPressed: () {
-                          getImage();
-                        },
-                        icon: Icon(Icons.photo),
-                        label: Text("Add Photo")),
-                    SizedBox(
+                    Consumer<TempImageProvider>(
+                        builder: (context, value2, child) {
+                      return Column(
+                        children: [
+                          Align(
+                              alignment: Alignment.topCenter,
+                              child: value2.tempImagePath == null
+                                  ? const CircleAvatar(
+                                      backgroundImage: AssetImage(
+                                          'assets/images/gallery.png'),
+                                      radius: 65,
+                                    )
+                                  : CircleAvatar(
+                                      radius: 65,
+                                      backgroundImage: FileImage(
+                                        File(value2.tempImagePath!),
+                                      ),
+                                    )),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          ElevatedButton.icon(
+                              onPressed: () {
+                                getImage(value2);
+                              },
+                              icon: const Icon(Icons.photo),
+                              label: const Text("Add Photo")),
+                        ],
+                      );
+                    }),
+                    const SizedBox(
                       height: 30,
                     ),
                     TextFormField(
                       controller: _namecontroller,
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                           label: Text("Student's Name"),
                           border: OutlineInputBorder(
                               borderRadius:
@@ -99,9 +111,10 @@ class _EditStudentState extends State<EditStudent> {
                         if (_namecontroller.text.isEmpty) {
                           return 'Name Field is Empty';
                         }
+                        return null;
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 30,
                     ),
                     TextFormField(
@@ -119,9 +132,10 @@ class _EditStudentState extends State<EditStudent> {
                         if (_agecontroller.text.isEmpty) {
                           return 'Age Field is Empty';
                         }
+                        return null;
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 30,
                     ),
                     TextFormField(
@@ -142,9 +156,10 @@ class _EditStudentState extends State<EditStudent> {
                         } else if (_phonecontroller.text.length < 10) {
                           return 'Enter a valid Phone number';
                         }
+                        return null;
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 30,
                     ),
                     TextFormField(
@@ -163,9 +178,10 @@ class _EditStudentState extends State<EditStudent> {
                         } else if (int.parse(_markcontroller.text) > 100) {
                           return 'Enter a valid Mark';
                         }
+                        return null;
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 40,
                     ),
                     Row(
@@ -173,32 +189,35 @@ class _EditStudentState extends State<EditStudent> {
                       children: [
                         ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                                fixedSize: Size(130, 50),
+                                fixedSize: const Size(130, 50),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(30)),
                                 backgroundColor: Colors.red),
                             onPressed: () {
                               Navigator.of(context).pop();
                             },
-                            icon: Icon(Icons.cancel),
-                            label: Text("Cancel")),
+                            icon: const Icon(Icons.cancel),
+                            label: const Text("Cancel")),
                         ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                                fixedSize: Size(130, 50),
+                                fixedSize: const Size(130, 50),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(30)),
                                 backgroundColor: Colors.green[600]),
                             onPressed: () {
+                              final tempImageProvider =
+                                  Provider.of<TempImageProvider>(context,
+                                      listen: false);
                               if (_formKey.currentState!.validate()) {
-                                if (_image?.path == null) {
+                                if (tempImageProvider.tempImagePath == null) {
                                   addingFailed();
                                 } else {
                                   updateSuccess(widget.index);
                                 }
                               }
                             },
-                            icon: Icon(Icons.send),
-                            label: Text("Submit")),
+                            icon: const Icon(Icons.send),
+                            label: const Text("Submit")),
                       ],
                     )
                   ],
@@ -211,17 +230,8 @@ class _EditStudentState extends State<EditStudent> {
     );
   }
 
-  Future<void> getImage() async {
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (image == null) {
-      return;
-    }
-
-    final imageTemporary = File(image.path);
-
-    setState(() {
-      _image = imageTemporary;
-    });
+  void getImage(TempImageProvider value) async {
+    await value.getImage();
   }
 
   void addingFailed() {
@@ -237,23 +247,27 @@ class _EditStudentState extends State<EditStudent> {
   }
 
   void updateSuccess(int index) {
+    final value = Provider.of<StudentProvider>(context, listen: false);
+    final value2 = Provider.of<TempImageProvider>(context, listen: false);
     Student st = Student(
         name: _namecontroller.text.trim(),
         age: _agecontroller.text.trim(),
         number: _phonecontroller.text.trim(),
         mark: _markcontroller.text.trim(),
-        profpic: _image!.path);
-    editStudent(index, st);
+        profpic: value2.tempImagePath!);
+    value.editStudent(index, st);
+    value2.tempImagePath = null;
+    value2.notify();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text("${_namecontroller.text}'s details edittted successfully!"),
       backgroundColor: Colors.green,
-      margin: EdgeInsets.all(10),
+      margin: const EdgeInsets.all(10),
       behavior: SnackBarBehavior.floating,
       showCloseIcon: true,
       closeIconColor: Colors.white,
-      duration: Duration(seconds: 2),
+      duration: const Duration(seconds: 2),
     ));
-    _image = null;
+    value2.tempImagePath = null;
     Navigator.of(context).pop();
   }
 }
